@@ -1,0 +1,2 @@
+[console_scripts]
+run-mosairt = main:run_experiment_entry

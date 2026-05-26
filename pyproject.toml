@@ -12,7 +12,16 @@ dependencies = [
     "numpy",
     "scipy",
     "matplotlib",
-    "pandas"
+    "pandas",
+    "scikit-learn"
 ]
+
+[tool.setuptools]
+package-dir={"" = "src"}
+
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
+include = ["irt*"]
+
+[project.scripts]
+run-mosairt = "main:run_experiment_entry"

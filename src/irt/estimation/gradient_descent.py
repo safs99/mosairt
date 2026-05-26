@@ -1,5 +1,7 @@
 import numpy as np
 
+RANDOM_SEED = 42
+
 def sigmoid(x):
     x = np.clip(x, -500, 500)
     return 1 / (1 + np.exp(-x))
@@ -95,7 +97,65 @@ def fit_gradient_descent(X, mask=None, n_epochs=5000, learning_rate=0.1,
  
     return theta, b, loss_history
 
+def search_best_lr(X, mask=None, b_em=None,
+                   lrs=(0.01, 0.05, 0.1, 0.5, 1.0),#on cherche le meilleur taux d'apprentissage pour que em et gd se ressemblent le +
+                   epochs_list=(1000, 3000, 5000)):#on cherche le meilleur nb d'epoch pour savoir quel est le meilleur
+    if mask is None:
+        mask = np.ones_like(X, dtype=float)
+ 
+    results = []
+    best_rmse = np.inf
+    best_lr, best_epochs = 0.1, 5000 #val par defaut
+ 
+    print(f"\n{'lr':>8} {'epochs':>8} {'RMSE vs EM':>12} {'loss finale':>12}")
+    print("-" * 46)
+ 
+    for lr in lrs:
+        for epochs in epochs_list:
+            theta, b_gd, loss_hist = fit_gradient_descent(
+                X, mask=mask, n_epochs=epochs,
+                learning_rate=lr, verbose=False
+            )
+            loss_finale = loss_hist[-1]
+ 
+            if b_em is not None:
+                #rmse entre b_em et b_gd (calcul l'ecart )
+                rmse = float(np.sqrt(np.mean((b_gd - b_em) ** 2)))
+                print(f"{lr:>8.3f} {epochs:>8d} {rmse:>12.4f} {loss_finale:>12.6f}")
+                if rmse < best_rmse: #on prend le plus ptit rmse
+                    best_rmse   = rmse
+                    best_lr     = lr
+                    best_epochs = epochs
+            else:
+                print(f"{lr:>8.3f} {epochs:>8d} {'N/A':>12} {loss_finale:>12.6f}")
+ 
+            results.append({
+                'lr': lr, 'epochs': epochs,
+                'rmse_vs_em': rmse if b_em is not None else None,
+                'loss_finale': loss_finale
+            })
+ 
+    if b_em is not None:
+        print(f"\nMeilleur : lr={best_lr}, epochs={best_epochs}, "
+              f"RMSE={best_rmse:.4f}")
+ 
+    return {
+        'best_lr':     best_lr,
+        'best_epochs': best_epochs,
+        'best_rmse':   best_rmse,
+        'all_results': results
+    }
+
 def predict(theta, b, threshold = 0.5):
+        """Predit 1 ou 0  pour une personne et un item (theta, b)
+        Si P(réussite) > threshold, on predit 1 sinon 0 
+
+        threshols : est un seuil permettant de transformer une valeur continues
+        en une classification binaire (0 ou 1).
+
+        Si P(réussite) >= threshold, la condition devient True et on predit 1,
+        Si P(réussite) < threshold, la condition devient False et on predit 0 
+        """
         theta = np.asarray(theta, dtype = float)
         b = np.asarray(b, dtype = float)
         if theta.ndim == 0 and b.ndim ==0:
@@ -103,12 +163,16 @@ def predict(theta, b, threshold = 0.5):
             return int(P> threshold)
         
 def evaluate(X, theta, b, mask = None):
+        
         if mask is None:
             mask = np.ones_like(X, dtype = float)
         mask = mask.astype(bool)
+
+        #Ici threshold (seuil) fixé à 0.5
         P= predict_proba(theta, b)
         X_pred = (P>=0.5).astype(int)
 
+        #Comparaison sur les données observées
         y_true = X[mask].astype(int)
         y_pred = X_pred[mask].astype(int)
 
