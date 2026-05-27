@@ -6,6 +6,7 @@ from irt.models.model_1pl import Rasch
 from irt.utils.evaluation import cross_validate
 from irt.estimation.gradient_descent import search_best_lr
 from irt.estimation.gradient_descent import fit_gradient_descent
+from irt.data_loader import OuladConverter
 
 
 #Pour que le tirage au sort soit reproductible, on utilise le nb 42 
@@ -44,13 +45,13 @@ def compute_metrics(predicted, expected):
     }
 
 
-def run_experiment(model_class, name):
+def run_experiment(model_class, name, X):
     print(f"\n" + "="*40)
     print(f" EXPÉRIENCE : Modèle {name}")
     print("="*40)
 
     # Données simulées — 100 personnes, 10 items
-    X = np.random.randint(0, 2, size=(100, 10))
+    #X = np.random.randint(0, 2, size=(100, 10)) 
 
     #Valisation croisée 
 
@@ -218,7 +219,18 @@ def _compare_em_gd(X):
 
 def run_experiment_entry():
     """Fonction appelée automatiquement par la commande run-mosairt"""
-    run_experiment(Rasch, "1PL / Rasch")
+    print("\n--- CHARGEMENT DE DONNEES OULAD ---")
+
+    #chargement des données
+    df_oulad = OuladConverter.to_irt_matrix("data/studentAssessment.csv", score_threshold=40)
+
+    #conversion en matrice Numpy
+    X_real = df_oulad.values
+
+    #on prend seulement les 1500 premiers exemples
+    X_real = X_real[:150, :]
+
+    run_experiment(Rasch, "1PL / Rasch", X_real)
     # run_experiment(TwoPL,   "2PL")  
     # run_experiment(ThreePL, "3PL")   
     # run_experiment(FourPL,  "4PL") 
